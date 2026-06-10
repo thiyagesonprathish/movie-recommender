@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="results-header">
+  <a href="/" class="back-link">← Back to search</a>
+  <h1>Because you liked <span class="highlight">{{ movie }}</span></h1>
+  <p class="subtitle">Here are your personalised recommendations:</p>
+</div>
+
+<div class="movie-grid">
+  {% for title, score in recommendations %}
+    <a href="/search?movie={{ title }}" class="movie-card">
+      <div class="movie-title">{{ title }}</div>
+      <div class="movie-rating">🎯 Match: {{ "%.0f"|format(score * 100) }}%</div>
+    </a>
+  {% else %}
+    <p>No recommendations found. Try a different movie.</p>
+  {% endfor %}
+</div>
+
+<div class="search-again">
+  <h3>Search for another movie</h3>
+  <form action="/search" method="GET" class="search-form">
+    <input type="text" name="q" placeholder="Search..." class="search-input"/>
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+</div>
+
+{% endblock %}

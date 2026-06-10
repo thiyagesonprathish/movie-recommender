@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="hero">
+  <h1>Find Your Next Favourite Movie</h1>
+  <p>Search for a movie you love and we'll recommend what to watch next.</p>
+
+  <form action="/search" method="GET" class="search-form">
+    <input
+      type="text"
+      name="q"
+      placeholder="Search for a movie e.g. Toy Story..."
+      value="{{ query or '' }}"
+      class="search-input"
+      autocomplete="off"
+    />
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+
+  {% if suggestions %}
+    <div class="suggestions">
+      <p>Select a movie to get recommendations:</p>
+      {% for title in suggestions %}
+        <a href="/search?movie={{ title }}" class="suggestion-tag">{{ title }}</a>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+
+<div class="section">
+  {% if session.get('user') %}
+    <h2>Welcome back, {{ session['user'] }}! 👋</h2>
+    <p class="subtitle">Here are the most popular movies to get you started:</p>
+  {% else %}
+    <h2>🔥 Popular Movies</h2>
+    <p class="subtitle">
+      New here? These are our most highly rated movies.
+      <a href="/register">Create an account</a> for personalised recommendations.
+    </p>
+  {% endif %}
+
+  <div class="movie-grid">
+    {% for title, rating in popular %}
+      <a href="/search?movie={{ title }}" class="movie-card">
+        <div class="movie-title">{{ title }}</div>
+        <div class="movie-rating">⭐ {{ rating }}/5</div>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}
