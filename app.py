@@ -23,7 +23,16 @@ def save_users(users):
 # ── Routes ──────────────────────────────────────────────────
 @app.route('/')
 def index():
-    popular = get_popular_movies(10)
+    popular_raw = get_popular_movies(10)
+    popular = []
+    for title, rating in popular_raw:
+        details = get_movie_details(title)
+        popular.append({
+            'title':  title,
+            'rating': rating,
+            'poster': details['poster'],
+            'genres': details['genres']
+        })
     return render_template('index.html', popular=popular)
 
 @app.route('/search')

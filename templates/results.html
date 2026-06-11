@@ -3,12 +3,11 @@
 
 <div class="results-header">
   <a href="/" class="back-link">← Back to search</a>
-  <h1>Because you liked <span class="highlight">{{ movie }}</span></h1>
+  <h1>Because you liked <span class="gold-text">{{ movie }}</span></h1>
 </div>
 
-<!-- Searched movie details -->
 {% if searched_details %}
-<div class="searched-movie">
+<div class="searched-movie glass-card">
   <div class="searched-poster">
     {% if searched_details.poster %}
       <img src="{{ searched_details.poster }}" alt="{{ movie }} poster"/>
@@ -20,7 +19,7 @@
     <h2>{{ movie }}</h2>
     <div class="meta-row">
       {% if searched_details.rating != 'N/A' %}
-        <span class="badge">⭐ TMDB {{ searched_details.rating }}</span>
+        <span class="badge gold-badge">⭐ TMDB {{ searched_details.rating }}</span>
       {% endif %}
       {% if searched_details.year %}
         <span class="badge">📅 {{ searched_details.year }}</span>
@@ -34,14 +33,15 @@
 </div>
 {% endif %}
 
-<!-- Recommendations -->
 <div class="section">
-  <h2>🎯 Recommended for you</h2>
-  <p class="subtitle">Powered by hybrid collaborative + content-based filtering</p>
+  <div class="section-header">
+    <h2>🎯 Recommended for you</h2>
+    <p class="subtitle">Powered by hybrid collaborative + content-based filtering</p>
+  </div>
 
   <div class="rec-grid">
     {% for rec in recommendations %}
-    <a href="/search?movie={{ rec.title }}" class="rec-card">
+    <a href="/search?movie={{ rec.title }}" class="rec-card glass-card">
       <div class="rec-poster">
         {% if rec.poster %}
           <img src="{{ rec.poster }}" alt="{{ rec.title }} poster"/>
@@ -54,20 +54,20 @@
         <div class="rec-title">{{ rec.title }}</div>
         <div class="rec-meta">
           {% if rec.rating != 'N/A' %}
-            <span>⭐ {{ rec.rating }}</span>
+            <span class="gold-text">⭐ {{ rec.rating }}</span>
           {% endif %}
           {% if rec.year %}
             <span>{{ rec.year }}</span>
           {% endif %}
         </div>
         {% if rec.genres %}
-          <div class="rec-genres">
-            {% for genre in rec.genres %}
-              <span class="genre-tag-sm">{{ genre }}</span>
-            {% endfor %}
-          </div>
+        <div class="rec-genres">
+          {% for genre in rec.genres %}
+            <span class="genre-tag-sm">{{ genre }}</span>
+          {% endfor %}
+        </div>
         {% endif %}
-        <p class="rec-overview">{{ rec.overview[:120] }}{% if rec.overview|length > 120 %}...{% endif %}</p>
+        <p class="rec-overview">{{ rec.overview[:110] }}{% if rec.overview|length > 110 %}...{% endif %}</p>
       </div>
     </a>
     {% else %}
@@ -76,12 +76,14 @@
   </div>
 </div>
 
-<!-- Search again -->
-<div class="search-again">
-  <h3>Search for another movie</h3>
+<div class="search-again glass-card">
+  <h3>🔍 Search for another movie</h3>
   <form action="/search" method="GET" class="search-form">
-    <input type="text" name="q" placeholder="Search..." class="search-input"/>
-    <button type="submit" class="btn btn-primary">Search</button>
+    <div class="search-wrapper">
+      <span class="search-icon">🔍</span>
+      <input type="text" name="q" placeholder="Search..." class="search-input"/>
+      <button type="submit" class="btn btn-gold">Search</button>
+    </div>
   </form>
 </div>
 
