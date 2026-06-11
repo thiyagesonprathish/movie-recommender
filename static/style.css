@@ -225,6 +225,9 @@ body {
   border-radius: 12px;
   overflow: hidden;
   transition: border-color 0.2s, transform 0.2s;
+  text-decoration: none;
+  color: #e0e0e0;
+  display: block;
 }
 .rec-card:hover { border-color: #e94560; transform: translateY(-3px); }
 .rec-poster { position: relative; }

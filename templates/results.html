@@ -41,7 +41,7 @@
 
   <div class="rec-grid">
     {% for rec in recommendations %}
-    <div class="rec-card">
+    <a href="/search?movie={{ rec.title }}" class="rec-card">
       <div class="rec-poster">
         {% if rec.poster %}
           <img src="{{ rec.poster }}" alt="{{ rec.title }} poster"/>
@@ -69,7 +69,7 @@
         {% endif %}
         <p class="rec-overview">{{ rec.overview[:120] }}{% if rec.overview|length > 120 %}...{% endif %}</p>
       </div>
-    </div>
+    </a>
     {% else %}
       <p>No recommendations found. Try a different movie.</p>
     {% endfor %}
