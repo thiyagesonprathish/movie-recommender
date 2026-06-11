@@ -1,3 +1,4 @@
+from recommender import hybrid_recommend, get_popular_movies, search_titles, get_movie_details, ALL_TITLES
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from recommender import hybrid_recommend, get_popular_movies, search_titles, ALL_TITLES
 import json
@@ -32,10 +33,29 @@ def search():
 
     if movie:
         recs = hybrid_recommend(movie, n=10)
+
+        # Fetch TMDB details for searched movie
+        searched_details = get_movie_details(movie)
+
+        # Fetch TMDB details for each recommendation
+        recs_with_details = []
+        for title, score in recs:
+            details = get_movie_details(title)
+            recs_with_details.append({
+                'title':    title,
+                'score':    score,
+                'poster':   details['poster'],
+                'overview': details['overview'],
+                'rating':   details['rating'],
+                'year':     details['year'],
+                'genres':   details['genres']
+            })
+
         return render_template(
             'results.html',
             movie=movie,
-            recommendations=recs,
+            searched_details=searched_details,
+            recommendations=recs_with_details,
             logged_in='user' in session,
             username=session.get('user', '')
         )

@@ -4,6 +4,13 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import json
 import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+TMDB_API_KEY = os.getenv('TMDB_API_KEY')
+TMDB_BASE    = 'https://api.themoviedb.org/3'
+POSTER_BASE  = 'https://image.tmdb.org/t/p/w500'
 
 # ── Load data ──────────────────────────────────────────────
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
@@ -12,6 +19,7 @@ MODELS_DIR = os.path.join(BASE_DIR, 'models')
 
 clean_data = pd.read_csv(os.path.join(DATA_DIR, 'clean_data.csv'))
 movies     = pd.read_csv(os.path.join(DATA_DIR, 'ml-latest-small', 'movies.csv'))
+links      = pd.read_csv(os.path.join(DATA_DIR, 'ml-latest-small', 'links.csv'))
 
 # ── Load optimal weights ────────────────────────────────────
 weights_path = os.path.join(MODELS_DIR, 'hybrid_weights.json')
@@ -65,8 +73,62 @@ content_similarity_df = pd.DataFrame(
 )
 print("✅ Content matrix ready")
 
-# ── All movie titles for search ─────────────────────────────
 ALL_TITLES = sorted(collab_similarity_df.columns.tolist())
+
+
+# ── TMDB API ────────────────────────────────────────────────
+def get_tmdb_id(movie_title):
+    """Get TMDB ID from links.csv using movieId."""
+    match = movies[movies['title'] == movie_title]
+    if match.empty:
+        return None
+    movie_id = match.iloc[0]['movieId']
+    link_row = links[links['movieId'] == movie_id]
+    if link_row.empty or pd.isna(link_row.iloc[0]['tmdbId']):
+        return None
+    return int(link_row.iloc[0]['tmdbId'])
+
+
+def get_movie_details(movie_title):
+    """
+    Fetch poster, overview, rating and release date
+    from TMDB API for a given movie title.
+    """
+    tmdb_id = get_tmdb_id(movie_title)
+    if not tmdb_id or not TMDB_API_KEY:
+        return {
+            'poster':   None,
+            'overview': 'No summary available.',
+            'rating':   'N/A',
+            'year':     '',
+            'genres':   []
+        }
+
+    try:
+        url      = f"{TMDB_BASE}/movie/{tmdb_id}"
+        params   = {'api_key': TMDB_API_KEY, 'language': 'en-US'}
+        response = requests.get(url, params=params, timeout=5)
+
+        if response.status_code == 200:
+            data = response.json()
+            poster_path = data.get('poster_path')
+            return {
+                'poster':   f"{POSTER_BASE}{poster_path}" if poster_path else None,
+                'overview': data.get('overview', 'No summary available.') or 'No summary available.',
+                'rating':   round(data.get('vote_average', 0), 1),
+                'year':     data.get('release_date', '')[:4] if data.get('release_date') else '',
+                'genres':   [g['name'] for g in data.get('genres', [])][:3]
+            }
+    except Exception:
+        pass
+
+    return {
+        'poster':   None,
+        'overview': 'No summary available.',
+        'rating':   'N/A',
+        'year':     '',
+        'genres':   []
+    }
 
 
 # ── Hybrid recommendation ───────────────────────────────────
@@ -98,7 +160,7 @@ def hybrid_recommend(movie_title, n=10):
     return top
 
 
-# ── Cold start — popular movies ─────────────────────────────
+# ── Cold start ──────────────────────────────────────────────
 def get_popular_movies(n=10):
     popular = (
         clean_data.groupby('title')['rating']
@@ -111,7 +173,7 @@ def get_popular_movies(n=10):
     return [(t, round(r['avg_rating'], 2)) for t, r in top.iterrows()]
 
 
-# ── Search titles ───────────────────────────────────────────
+# ── Search ──────────────────────────────────────────────────
 def search_titles(query, n=8):
     q = query.lower()
     return [t for t in ALL_TITLES if q in t.lower()][:n]

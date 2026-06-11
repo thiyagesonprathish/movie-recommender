@@ -163,3 +163,102 @@ body {
   font-size: 0.95rem;
 }
 .form-group input:focus { outline: none; border-color: #e94560; }
+
+/* SEARCHED MOVIE */
+.searched-movie {
+  display: flex;
+  gap: 28px;
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 14px;
+  padding: 24px;
+  margin: 24px 0 40px;
+}
+.searched-poster img {
+  width: 160px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.no-poster {
+  width: 160px;
+  height: 240px;
+  background: #2a2a4a;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+}
+.searched-info { flex: 1; }
+.searched-info h2 { font-size: 1.6rem; margin-bottom: 12px; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.badge {
+  padding: 4px 12px;
+  background: #2a2a4a;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: #e0e0e0;
+}
+.genre-tag {
+  padding: 4px 12px;
+  background: rgba(233,69,96,0.15);
+  border: 1px solid rgba(233,69,96,0.3);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: #e94560;
+}
+.overview {
+  color: #a0a0c0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+/* REC GRID */
+.rec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+.rec-card {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.rec-card:hover { border-color: #e94560; transform: translateY(-3px); }
+.rec-poster { position: relative; }
+.rec-poster img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+.rec-poster .no-poster {
+  width: 100%;
+  height: 200px;
+  border-radius: 0;
+}
+.match-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(233,69,96,0.9);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.rec-info { padding: 14px; }
+.rec-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; line-height: 1.4; }
+.rec-meta { display: flex; gap: 10px; color: #a0a0c0; font-size: 0.8rem; margin-bottom: 8px; }
+.rec-genres { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.genre-tag-sm {
+  padding: 2px 8px;
+  background: rgba(233,69,96,0.1);
+  border: 1px solid rgba(233,69,96,0.2);
+  border-radius: 10px;
+  font-size: 0.72rem;
+  color: #e94560;
+}
+.rec-overview { color: #a0a0c0; font-size: 0.78rem; line-height: 1.5; }
