@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="results-header">
+  <a href="/" class="back-link">← Back to home</a>
+  <h1>Model <span class="gold-text">Comparison</span></h1>
+  <p class="subtitle">See how each model recommends differently for the same movie</p>
+</div>
+
+<!-- Search -->
+<div class="compare-search glass-card">
+  <h3>🔍 Search a movie to compare</h3>
+  <form action="/compare" method="GET" class="search-form" style="margin-top:16px;">
+    <div class="search-wrapper">
+      <span class="search-icon">🔍</span>
+      <input
+        type="text"
+        name="q"
+        placeholder="e.g. Toy Story, Forrest Gump..."
+        value="{{ query or '' }}"
+        class="search-input"
+        autocomplete="off"
+      />
+      <button type="submit" class="btn btn-gold">Compare</button>
+    </div>
+  </form>
+
+  {% if suggestions %}
+  <div class="suggestions" style="margin-top:16px;">
+    <p>Select a movie:</p>
+    {% for title in suggestions %}
+      <a href="/compare?movie={{ title }}" class="suggestion-tag">{{ title }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% if movie %}
+
+<!-- Searched movie -->
+<div class="searched-movie glass-card" style="margin-top:32px;">
+  <div class="searched-poster">
+    {% if searched_details.poster %}
+      <img src="{{ searched_details.poster }}" alt="{{ movie }}"/>
+    {% else %}
+      <div class="no-poster">🎬</div>
+    {% endif %}
+  </div>
+  <div class="searched-info">
+    <div class="hero-badge" style="margin-bottom:12px;">Comparing recommendations for</div>
+    <h2>{{ movie }}</h2>
+    <div class="meta-row" style="margin-top:10px;">
+      {% if searched_details.rating != 'N/A' %}
+        <span class="badge gold-badge">⭐ TMDB {{ searched_details.rating }}</span>
+      {% endif %}
+      {% if searched_details.year %}
+        <span class="badge">📅 {{ searched_details.year }}</span>
+      {% endif %}
+      {% for genre in searched_details.genres %}
+        <span class="genre-tag">{{ genre }}</span>
+      {% endfor %}
+    </div>
+    <p class="overview" style="margin-top:12px;">{{ searched_details.overview[:200] }}{% if searched_details.overview|length > 200 %}...{% endif %}</p>
+  </div>
+</div>
+
+<!-- Stats bar -->
+<div class="stats-bar glass-card">
+  <div class="stat-item">
+    <div class="stat-label">Hybrid RMSE</div>
+    <div class="stat-value gold-text">0.9964</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <div class="stat-label">Optimal Weights</div>
+    <div class="stat-value gold-text">40% Collab / 60% Content</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <div class="stat-label">Ratings Analysed</div>
+    <div class="stat-value gold-text">100,836</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <div class="stat-label">Movies in Dataset</div>
+    <div class="stat-value gold-text">9,742</div>
+  </div>
+</div>
+
+<!-- 3 column comparison -->
+<div class="compare-grid">
+
+  <!-- Collaborative -->
+  <div class="compare-col glass-card">
+    <div class="compare-col-header collab-header">
+      <div class="col-icon">👥</div>
+      <div>
+        <div class="col-title">Collaborative Filtering</div>
+        <div class="col-desc">Based on user rating patterns</div>
+      </div>
+    </div>
+    <div class="compare-list">
+      {% for rec in collab_recs %}
+      <a href="/compare?movie={{ rec.title }}" class="compare-item">
+        <div class="compare-item-poster">
+          {% if rec.poster %}
+            <img src="{{ rec.poster }}" alt="{{ rec.title }}"/>
+          {% else %}
+            <div class="mini-no-poster">🎬</div>
+          {% endif %}
+        </div>
+        <div class="compare-item-info">
+          <div class="compare-item-title">{{ rec.title }}</div>
+          <div class="compare-item-meta">
+            {% if rec.rating != 'N/A' %}<span>⭐ {{ rec.rating }}</span>{% endif %}
+            {% if rec.year %}<span>{{ rec.year }}</span>{% endif %}
+          </div>
+          <div class="compare-score collab-score">Similarity: {{ rec.score }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Content-Based -->
+  <div class="compare-col glass-card">
+    <div class="compare-col-header content-header">
+      <div class="col-icon">🎭</div>
+      <div>
+        <div class="col-title">Content-Based Filtering</div>
+        <div class="col-desc">Based on genres and metadata</div>
+      </div>
+    </div>
+    <div class="compare-list">
+      {% for rec in content_recs %}
+      <a href="/compare?movie={{ rec.title }}" class="compare-item">
+        <div class="compare-item-poster">
+          {% if rec.poster %}
+            <img src="{{ rec.poster }}" alt="{{ rec.title }}"/>
+          {% else %}
+            <div class="mini-no-poster">🎬</div>
+          {% endif %}
+        </div>
+        <div class="compare-item-info">
+          <div class="compare-item-title">{{ rec.title }}</div>
+          <div class="compare-item-meta">
+            {% if rec.rating != 'N/A' %}<span>⭐ {{ rec.rating }}</span>{% endif %}
+            {% if rec.year %}<span>{{ rec.year }}</span>{% endif %}
+          </div>
+          <div class="compare-score content-score">Similarity: {{ rec.score }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Hybrid -->
+  <div class="compare-col glass-card">
+    <div class="compare-col-header hybrid-header">
+      <div class="col-icon">🔀</div>
+      <div>
+        <div class="col-title">Hybrid Model</div>
+        <div class="col-desc">Best of both — KFold optimised</div>
+      </div>
+    </div>
+    <div class="compare-list">
+      {% for rec in hybrid_recs %}
+      <a href="/compare?movie={{ rec.title }}" class="compare-item">
+        <div class="compare-item-poster">
+          {% if rec.poster %}
+            <img src="{{ rec.poster }}" alt="{{ rec.title }}"/>
+          {% else %}
+            <div class="mini-no-poster">🎬</div>
+          {% endif %}
+        </div>
+        <div class="compare-item-info">
+          <div class="compare-item-title">{{ rec.title }}</div>
+          <div class="compare-item-meta">
+            {% if rec.rating != 'N/A' %}<span>⭐ {{ rec.rating }}</span>{% endif %}
+            {% if rec.year %}<span>{{ rec.year }}</span>{% endif %}
+          </div>
+          <div class="compare-score hybrid-score">Match: {{ "%.0f"|format(rec.score * 100) }}%</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Explanation -->
+<div class="compare-explanation glass-card">
+  <h3>📊 How each model works</h3>
+  <div class="explanation-grid">
+    <div class="explanation-item">
+      <div class="exp-icon collab-color">👥</div>
+      <div class="exp-title collab-color">Collaborative Filtering</div>
+      <p>Analyses how 610 users rated 9,742 movies. Finds movies that similar users also enjoyed. Strong for discovering unexpected gems but struggles with new movies that have few ratings (cold start problem).</p>
+    </div>
+    <div class="explanation-item">
+      <div class="exp-icon content-color">🎭</div>
+      <div class="exp-title content-color">Content-Based Filtering</div>
+      <p>Uses TF-IDF vectorisation on movie genres and release year to find similar content. Works well for new movies but tends to recommend very similar content, reducing diversity.</p>
+    </div>
+    <div class="explanation-item">
+      <div class="exp-icon hybrid-color">🔀</div>
+      <div class="exp-title hybrid-color">Hybrid Model</div>
+      <p>Combines both approaches using weights optimised by KFold cross-validation (40% collaborative + 60% content). Achieves RMSE of 0.9964 — outperforming both individual models.</p>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}

@@ -1,3 +1,4 @@
+from recommender import hybrid_recommend, get_popular_movies, search_titles, get_movie_details, ALL_TITLES, collab_similarity_df, content_similarity_df
 from recommender import hybrid_recommend, get_popular_movies, search_titles, get_movie_details, ALL_TITLES
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from recommender import hybrid_recommend, get_popular_movies, search_titles, ALL_TITLES
@@ -123,6 +124,79 @@ def logout():
     session.pop('user', None)
     flash('You have been logged out.', 'success')
     return redirect(url_for('index'))
+
+@app.route('/compare')
+def compare():
+    query = request.args.get('q', '').strip()
+    movie = request.args.get('movie', '').strip()
+
+    if movie:
+        # Collaborative only
+        collab_recs = []
+        if movie in collab_similarity_df.columns:
+            collab_scores = (
+                collab_similarity_df[movie]
+                .drop(movie)
+                .sort_values(ascending=False)
+                .head(5)
+            )
+            for title, score in collab_scores.items():
+                details = get_movie_details(title)
+                collab_recs.append({
+                    'title':  title,
+                    'score':  round(float(score), 4),
+                    'poster': details['poster'],
+                    'rating': details['rating'],
+                    'year':   details['year']
+                })
+
+        # Content only
+        content_recs = []
+        if movie in content_similarity_df.columns:
+            content_scores = (
+                content_similarity_df[movie]
+                .drop(movie)
+                .sort_values(ascending=False)
+                .head(5)
+            )
+            for title, score in content_scores.items():
+                details = get_movie_details(title)
+                content_recs.append({
+                    'title':  title,
+                    'score':  round(float(score), 4),
+                    'poster': details['poster'],
+                    'rating': details['rating'],
+                    'year':   details['year']
+                })
+
+        # Hybrid
+        hybrid_recs = []
+        for title, score in hybrid_recommend(movie, n=5):
+            details = get_movie_details(title)
+            hybrid_recs.append({
+                'title':  title,
+                'score':  score,
+                'poster': details['poster'],
+                'rating': details['rating'],
+                'year':   details['year']
+            })
+
+        searched_details = get_movie_details(movie)
+
+        return render_template(
+            'compare.html',
+            movie=movie,
+            searched_details=searched_details,
+            collab_recs=collab_recs,
+            content_recs=content_recs,
+            hybrid_recs=hybrid_recs
+        )
+
+    suggestions = search_titles(query) if query else []
+    return render_template('compare.html',
+                           movie=None,
+                           suggestions=suggestions,
+                           query=query)
 
 if __name__ == '__main__':
     app.run(debug=True)
