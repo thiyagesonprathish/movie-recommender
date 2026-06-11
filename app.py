@@ -42,11 +42,7 @@ def search():
 
     if movie:
         recs = hybrid_recommend(movie, n=10)
-
-        # Fetch TMDB details for searched movie
         searched_details = get_movie_details(movie)
-
-        # Fetch TMDB details for each recommendation
         recs_with_details = []
         for title, score in recs:
             details = get_movie_details(title)
@@ -59,7 +55,6 @@ def search():
                 'year':     details['year'],
                 'genres':   details['genres']
             })
-
         return render_template(
             'results.html',
             movie=movie,
@@ -70,8 +65,18 @@ def search():
         )
 
     suggestions = search_titles(query) if query else []
+    popular_raw = get_popular_movies(10)
+    popular = []
+    for title, rating in popular_raw:
+        details = get_movie_details(title)
+        popular.append({
+            'title':  title,
+            'rating': rating,
+            'poster': details['poster'],
+            'genres': details['genres']
+        })
     return render_template('index.html',
-                           popular=get_popular_movies(10),
+                           popular=popular,
                            suggestions=suggestions,
                            query=query)
 
