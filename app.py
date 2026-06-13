@@ -1,16 +1,18 @@
-from recommender import hybrid_recommend, get_popular_movies, search_titles, get_movie_details, ALL_TITLES, collab_similarity_df, content_similarity_df
-from recommender import hybrid_recommend, get_popular_movies, search_titles, get_movie_details, ALL_TITLES
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-from recommender import hybrid_recommend, get_popular_movies, search_titles, ALL_TITLES
+from recommender import (hybrid_recommend, get_popular_movies, search_titles,
+                         get_movie_details, ALL_TITLES,
+                         collab_similarity_df, content_similarity_df)
 import json
 import os
+from datetime import date
 
 app = Flask(__name__)
 app.secret_key = 'movie_recommender_secret_2024'
 
-# ── User storage (JSON file) ────────────────────────────────
-USERS_FILE = 'users.json'
+USERS_FILE   = 'users.json'
+GUEST_LIMIT  = 10
 
+# ── User storage ────────────────────────────────────────────
 def load_users():
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE) as f:
@@ -21,7 +23,39 @@ def save_users(users):
     with open(USERS_FILE, 'w') as f:
         json.dump(users, f)
 
-# ── Routes ──────────────────────────────────────────────────
+# ── Guest search limit helpers ───────────────────────────────
+def get_guest_searches():
+    """Get how many searches guest has done today."""
+    today = str(date.today())
+    if session.get('search_date') != today:
+        session['search_date']  = today
+        session['search_count'] = 0
+    return session.get('search_count', 0)
+
+def increment_guest_searches():
+    """Increment guest search count."""
+    today = str(date.today())
+    if session.get('search_date') != today:
+        session['search_date']  = today
+        session['search_count'] = 0
+    session['search_count'] = session.get('search_count', 0) + 1
+
+def remaining_searches():
+    """How many searches remain for guest today."""
+    if 'user' in session:
+        return None  # unlimited for logged in users
+    return max(0, GUEST_LIMIT - get_guest_searches())
+
+# ── Context processor — available in all templates ───────────
+@app.context_processor
+def inject_search_info():
+    return {
+        'remaining': remaining_searches(),
+        'guest_limit': GUEST_LIMIT,
+        'is_logged_in': 'user' in session
+    }
+
+# ── Routes ───────────────────────────────────────────────────
 @app.route('/')
 def index():
     popular_raw = get_popular_movies(10)
@@ -42,8 +76,15 @@ def search():
     movie = request.args.get('movie', '').strip()
 
     if movie:
+        # Check guest limit
+        if 'user' not in session:
+            if get_guest_searches() >= GUEST_LIMIT:
+                return render_template('limit_reached.html')
+            increment_guest_searches()
+
         recs = hybrid_recommend(movie, n=10)
         searched_details = get_movie_details(movie)
+
         recs_with_details = []
         for title, score in recs:
             details = get_movie_details(title)
@@ -56,6 +97,7 @@ def search():
                 'year':     details['year'],
                 'genres':   details['genres']
             })
+
         return render_template(
             'results.html',
             movie=movie,
@@ -81,57 +123,19 @@ def search():
                            suggestions=suggestions,
                            query=query)
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form['password'].strip()
-        users    = load_users()
-
-        if username in users:
-            flash('Username already exists. Please choose another.', 'error')
-        elif len(username) < 3:
-            flash('Username must be at least 3 characters.', 'error')
-        elif len(password) < 4:
-            flash('Password must be at least 4 characters.', 'error')
-        else:
-            users[username] = {'password': password, 'history': []}
-            save_users(users)
-            session['user'] = username
-            flash(f'Welcome, {username}! Account created.', 'success')
-            return redirect(url_for('index'))
-
-    return render_template('register.html')
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form['password'].strip()
-        users    = load_users()
-
-        if username in users and users[username]['password'] == password:
-            session['user'] = username
-            flash(f'Welcome back, {username}!', 'success')
-            return redirect(url_for('index'))
-        else:
-            flash('Incorrect username or password.', 'error')
-
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    session.pop('user', None)
-    flash('You have been logged out.', 'success')
-    return redirect(url_for('index'))
-
 @app.route('/compare')
 def compare():
     query = request.args.get('q', '').strip()
     movie = request.args.get('movie', '').strip()
 
     if movie:
-        # Collaborative only
+        # Check guest limit
+        if 'user' not in session:
+            if get_guest_searches() >= GUEST_LIMIT:
+                return render_template('limit_reached.html')
+            increment_guest_searches()
+
+        # Collaborative
         collab_recs = []
         if movie in collab_similarity_df.columns:
             collab_scores = (
@@ -150,7 +154,7 @@ def compare():
                     'year':   details['year']
                 })
 
-        # Content only
+        # Content
         content_recs = []
         if movie in content_similarity_df.columns:
             content_scores = (
@@ -197,6 +201,50 @@ def compare():
                            movie=None,
                            suggestions=suggestions,
                            query=query)
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password'].strip()
+        users    = load_users()
+
+        if username in users:
+            flash('Username already exists. Please choose another.', 'error')
+        elif len(username) < 3:
+            flash('Username must be at least 3 characters.', 'error')
+        elif len(password) < 4:
+            flash('Password must be at least 4 characters.', 'error')
+        else:
+            users[username] = {'password': password, 'history': []}
+            save_users(users)
+            session['user'] = username
+            flash(f'Welcome, {username}! You now have unlimited searches.', 'success')
+            return redirect(url_for('index'))
+
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password'].strip()
+        users    = load_users()
+
+        if username in users and users[username]['password'] == password:
+            session['user'] = username
+            flash(f'Welcome back, {username}! Unlimited searches restored.', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Incorrect username or password.', 'error')
+
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    flash('Logged out. You have 10 free searches per day as a guest.', 'success')
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)

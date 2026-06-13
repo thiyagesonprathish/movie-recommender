@@ -3,28 +3,39 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🎬 MovieRec — AI Movie Recommendations</title>
+  <title>🎬 MovieRec — ML Movie Recommendations</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
 </head>
 <body>
-  <nav class="navbar glass-nav">
-    <a href="/" class="nav-brand">
-      <span class="brand-icon">🎬</span>
-      <span class="brand-text">MovieRec</span>
-    </a>
-    <div class="nav-links">
-      <a href="/compare" class="btn btn-outline-gold">⚖️ Compare Models</a>
-      {% if session.get('user') %}
-        <span class="nav-user">👤 {{ session['user'] }}</span>
-        <a href="/logout" class="btn btn-outline-gold">Logout</a>
-      {% else %}
-        <a href="/login" class="btn btn-outline-gold">Login</a>
-        <a href="/register" class="btn btn-gold">Register</a>
+<nav class="navbar glass-nav">
+  <a href="/" class="nav-brand">
+    <span class="brand-icon">🎬</span>
+    <span class="brand-text">MovieRec</span>
+  </a>
+  <div class="nav-links">
+    <a href="/compare" class="btn btn-outline-gold">⚖️ Compare Models</a>
+
+    {% if is_logged_in %}
+      <span class="nav-user">👤 {{ session['user'] }}</span>
+      <span class="unlimited-badge">∞ Unlimited</span>
+      <a href="/logout" class="btn btn-outline-gold">Logout</a>
+    {% else %}
+      {% if remaining is not none %}
+        {% if remaining > 3 %}
+          <span class="search-counter green-counter">🔍 {{ remaining }} searches left</span>
+        {% elif remaining > 0 %}
+          <span class="search-counter amber-counter">⚠️ {{ remaining }} searches left</span>
+        {% else %}
+          <span class="search-counter red-counter">❌ Limit reached</span>
+        {% endif %}
       {% endif %}
-    </div>
-  </nav>
+      <a href="/login" class="btn btn-outline-gold">Login</a>
+      <a href="/register" class="btn btn-gold">Register</a>
+    {% endif %}
+  </div>
+</nav>
 
   <div class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}

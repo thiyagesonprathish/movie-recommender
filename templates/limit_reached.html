@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="limit-container">
+  <div class="limit-card glass-card">
+    <div class="limit-icon">🎬</div>
+    <h1>Daily Limit Reached</h1>
+    <p class="limit-subtitle">You've used all <strong>10 free searches</strong> for today.</p>
+
+    <div class="limit-reset">
+      <div class="reset-icon">⏰</div>
+      <p>Your searches reset tomorrow at midnight.</p>
+    </div>
+
+    <div class="limit-divider"></div>
+
+    <h3>Get unlimited searches</h3>
+    <p class="limit-desc">Create a free account to unlock unlimited movie recommendations, model comparisons, and personalised suggestions.</p>
+
+    <div class="limit-actions">
+      <a href="/register" class="btn btn-gold btn-full">
+        🚀 Create Free Account
+      </a>
+      <a href="/login" class="btn btn-outline-gold btn-full" style="margin-top:10px;">
+        🔐 Login to Existing Account
+      </a>
+    </div>
+
+    <div class="limit-perks">
+      <h4>What you get with an account:</h4>
+      <ul>
+        <li>✅ Unlimited movie searches</li>
+        <li>✅ Unlimited model comparisons</li>
+        <li>✅ Personalised recommendations</li>
+        <li>✅ Search history saved</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

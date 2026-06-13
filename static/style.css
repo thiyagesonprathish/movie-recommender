@@ -524,3 +524,67 @@ body {
 .exp-icon.content-color, .exp-title.content-color { color: #34d399; }
 .exp-icon.hybrid-color, .exp-title.hybrid-color { color: var(--gold); }
 .explanation-item p { color: var(--dim); font-size: 0.8rem; line-height: 1.65; }
+
+/* ── SEARCH COUNTER ── */
+.search-counter {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+.green-counter { background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.25); }
+.amber-counter { background: rgba(251,191,36,0.1); color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+.red-counter   { background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.25); }
+.unlimited-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: var(--gold-dim);
+  color: var(--gold);
+  border: 1px solid var(--gold-border);
+}
+
+/* ── LIMIT REACHED PAGE ── */
+.limit-container { max-width: 480px; margin: 80px auto; }
+.limit-card { padding: 40px; text-align: center; }
+.limit-icon { font-size: 3.5rem; margin-bottom: 16px; }
+.limit-card h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 10px; }
+.limit-subtitle { color: var(--dim); font-size: 0.95rem; margin-bottom: 24px; }
+.limit-subtitle strong { color: var(--white); }
+
+.limit-reset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  background: rgba(251,191,36,0.08);
+  border: 1px solid rgba(251,191,36,0.2);
+  border-radius: 10px;
+  margin-bottom: 24px;
+}
+.reset-icon { font-size: 1.2rem; }
+.limit-reset p { font-size: 0.85rem; color: #fbbf24; }
+
+.limit-divider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: 24px 0;
+}
+
+.limit-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+.limit-desc { color: var(--dim); font-size: 0.85rem; margin-bottom: 24px; line-height: 1.6; }
+
+.limit-actions { margin-bottom: 24px; }
+
+.limit-perks {
+  text-align: left;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+.limit-perks h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; color: var(--dim); }
+.limit-perks ul { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+.limit-perks li { font-size: 0.82rem; color: var(--white); }
