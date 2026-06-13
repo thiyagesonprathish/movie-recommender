@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="results-header">
+  <a href="/" class="back-link">← Back to home</a>
+  <h1>What's your <span class="gold-text">mood?</span></h1>
+  <p class="subtitle">Pick how you're feeling and we'll find the perfect movie for you</p>
+</div>
+
+<!-- Mood selector grid -->
+<div class="mood-grid">
+  {% for key, mood in all_moods.items() %}
+  <a href="/mood?mood={{ key }}"
+     class="mood-card glass-card {% if selected_mood == key %}mood-active{% endif %}">
+    <div class="mood-emoji">{{ mood.label.split(' ')[-1] }}</div>
+    <div class="mood-label">{{ mood.label.rsplit(' ', 1)[0] }}</div>
+    <div class="mood-desc">{{ mood.desc }}</div>
+  </a>
+  {% endfor %}
+</div>
+
+{% if selected_mood and movies %}
+
+<!-- Results header -->
+<div class="mood-results-header">
+  <div class="mood-results-badge">
+    {{ mood_info.label }}
+  </div>
+  <h2>Perfect movies for your mood</h2>
+  <p class="subtitle">{{ mood_info.desc }} — showing top {{ movies|length }} picks</p>
+</div>
+
+<!-- Movie grid -->
+<div class="mood-movie-grid">
+  {% for movie in movies %}
+  <a href="/search?movie={{ movie.title }}" class="mood-movie-card glass-card">
+    <div class="mood-movie-poster">
+      {% if movie.poster %}
+        <img src="{{ movie.poster }}" alt="{{ movie.title }}"/>
+      {% else %}
+        <div class="no-poster">🎬</div>
+      {% endif %}
+      <div class="mood-movie-overlay">
+        <div class="mood-movie-genres">
+          {% for genre in movie.tmdb_genres[:2] %}
+            <span class="genre-pill">{{ genre }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="mood-movie-info">
+      <div class="mood-movie-title">{{ movie.title }}</div>
+      <div class="mood-movie-meta">
+        {% if movie.tmdb_rating != 'N/A' %}
+          <span class="gold-text">⭐ {{ movie.tmdb_rating }}</span>
+        {% endif %}
+        {% if movie.year %}
+          <span>{{ movie.year }}</span>
+        {% endif %}
+      </div>
+      <p class="mood-movie-overview">
+        {{ movie.overview[:100] }}{% if movie.overview|length > 100 %}...{% endif %}
+      </p>
+      <div class="mood-get-recs">Get recommendations →</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% elif selected_mood and not movies %}
+<div class="glass-card" style="padding:32px; text-align:center; margin-top:32px;">
+  <p style="color:var(--dim);">No movies found for this mood. Try another!</p>
+</div>
+{% endif %}
+
+{% endblock %}

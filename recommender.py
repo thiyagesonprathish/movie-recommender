@@ -177,3 +177,91 @@ def get_popular_movies(n=10):
 def search_titles(query, n=8):
     q = query.lower()
     return [t for t in ALL_TITLES if q in t.lower()][:n]
+
+# ── Mood to genre mapping ───────────────────────────────────
+MOOD_MAP = {
+    'laugh': {
+        'label':  'Make Me Laugh 😂',
+        'genres': ['Comedy'],
+        'desc':   'Light-hearted comedies to brighten your day'
+    },
+    'cry': {
+        'label':  'Make Me Cry 😢',
+        'genres': ['Drama', 'Romance'],
+        'desc':   'Emotional dramas that will move you deeply'
+    },
+    'scared': {
+        'label':  'Scare Me 😱',
+        'genres': ['Horror', 'Thriller'],
+        'desc':   'Edge of your seat horror and thrillers'
+    },
+    'mindblown': {
+        'label':  'Blow My Mind 🤯',
+        'genres': ['Sci-Fi', 'Mystery'],
+        'desc':   'Mind-bending stories that will make you think'
+    },
+    'romance': {
+        'label':  'Feel the Love ❤️',
+        'genres': ['Romance', 'Drama'],
+        'desc':   'Heartwarming love stories'
+    },
+    'action': {
+        'label':  'Action Rush 💥',
+        'genres': ['Action', 'Adventure'],
+        'desc':   'High octane action and adventure'
+    },
+    'adventure': {
+        'label':  'Take Me on an Adventure 🌍',
+        'genres': ['Adventure', 'Fantasy'],
+        'desc':   'Epic journeys to faraway worlds'
+    },
+    'inspired': {
+        'label':  'Inspire Me 💪',
+        'genres': ['Documentary', 'Drama'],
+        'desc':   'True stories and dramas that inspire'
+    }
+}
+
+
+def mood_recommend(mood_key, n=12):
+    """
+    Return top N movies matching a mood based on genre mapping.
+    Uses content similarity and genre filtering.
+    """
+    if mood_key not in MOOD_MAP:
+        return [], {}
+
+    mood     = MOOD_MAP[mood_key]
+    genres   = mood['genres']
+
+    # Filter movies matching the mood genres
+    matched = movies[
+        movies['genres'].apply(
+            lambda g: any(genre in g for genre in genres)
+        )
+    ].copy()
+
+    if matched.empty:
+        return [], mood
+
+    # Merge with ratings to get average rating and count
+    movie_stats = (
+        clean_data.groupby('title')['rating']
+        .agg(['mean', 'count'])
+        .rename(columns={'mean': 'avg_rating', 'count': 'num_ratings'})
+        .reset_index()
+    )
+
+    matched = matched.merge(movie_stats, on='title', how='left')
+    matched = matched.dropna(subset=['avg_rating'])
+    matched = matched[matched['num_ratings'] >= 20]
+
+    # Score = avg_rating weighted by log of num_ratings
+    matched['score'] = (
+        matched['avg_rating'] * np.log1p(matched['num_ratings'])
+    )
+
+    top = matched.sort_values('score', ascending=False).head(n)
+    results = top[['title', 'avg_rating', 'genres']].to_dict('records')
+
+    return results, mood

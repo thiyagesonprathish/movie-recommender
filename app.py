@@ -1,3 +1,7 @@
+from recommender import (hybrid_recommend, get_popular_movies, search_titles,
+                         get_movie_details, ALL_TITLES,
+                         collab_similarity_df, content_similarity_df,
+                         mood_recommend, MOOD_MAP)
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from recommender import (hybrid_recommend, get_popular_movies, search_titles,
                          get_movie_details, ALL_TITLES,
@@ -201,6 +205,48 @@ def compare():
                            movie=None,
                            suggestions=suggestions,
                            query=query)
+
+@app.route('/mood')
+def mood():
+    selected_mood = request.args.get('mood', '').strip()
+
+    if selected_mood and selected_mood in MOOD_MAP:
+        # Check guest limit
+        if 'user' not in session:
+            if get_guest_searches() >= GUEST_LIMIT:
+                return render_template('limit_reached.html')
+            increment_guest_searches()
+
+        results, mood_info = mood_recommend(selected_mood, n=12)
+
+        # Fetch TMDB details for each movie
+        movies_with_details = []
+        for item in results:
+            details = get_movie_details(item['title'])
+            movies_with_details.append({
+                'title':      item['title'],
+                'avg_rating': round(item['avg_rating'], 2),
+                'genres':     item['genres'],
+                'poster':     details['poster'],
+                'overview':   details['overview'],
+                'tmdb_rating': details['rating'],
+                'year':       details['year'],
+                'tmdb_genres': details['genres']
+            })
+
+        return render_template(
+            'mood.html',
+            selected_mood=selected_mood,
+            mood_info=mood_info,
+            movies=movies_with_details,
+            all_moods=MOOD_MAP
+        )
+
+    return render_template('mood.html',
+                           selected_mood=None,
+                           mood_info=None,
+                           movies=[],
+                           all_moods=MOOD_MAP)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
