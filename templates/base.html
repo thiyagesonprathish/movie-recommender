@@ -54,5 +54,19 @@
     <p>Built with 🔬 Hybrid ML · Collaborative + Content-Based Filtering · MovieLens Dataset</p>
     <p class="footer-stats">Hybrid RMSE: 0.9964 &nbsp;·&nbsp; 100K Ratings Analysed &nbsp;·&nbsp; 9,000+ Movies</p>
   </footer>
+  <script>
+  // Animate DNA bars on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    const bars = document.querySelectorAll('.dna-bar-fill');
+    setTimeout(function() {
+      bars.forEach(function(bar, index) {
+        setTimeout(function() {
+          const width = bar.getAttribute('data-width');
+          bar.style.width = width + '%';
+        }, index * 80);
+      });
+    }, 300);
+  });
+</script>
 </body>
 </html>

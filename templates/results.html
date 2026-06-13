@@ -33,6 +33,59 @@
 </div>
 {% endif %}
 
+<!-- Movie DNA -->
+{% if movie_dna %}
+<div class="dna-card glass-card">
+  <div class="dna-header">
+    <div>
+      <h3>🧬 Movie DNA</h3>
+      <p class="dna-subtitle">Genre breakdown and audience ratings for <span class="gold-text">{{ movie }}</span></p>
+    </div>
+    <div class="dna-stats">
+      <div class="dna-stat">
+        <div class="dna-stat-value gold-text">{{ movie_dna.movie_avg }}</div>
+        <div class="dna-stat-label">Avg Rating</div>
+      </div>
+      <div class="dna-stat">
+        <div class="dna-stat-value gold-text">{{ movie_dna.num_ratings }}</div>
+        <div class="dna-stat-label">Total Ratings</div>
+      </div>
+      <div class="dna-stat">
+        <div class="dna-stat-value gold-text">{{ movie_dna.genres|length }}</div>
+        <div class="dna-stat-label">Genres</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Genre pills -->
+  <div class="dna-genre-pills">
+    {% for genre in movie_dna.genres %}
+      <span class="genre-tag">{{ genre }}</span>
+    {% endfor %}
+  </div>
+
+  <!-- Animated bars -->
+  <div class="dna-bars">
+    {% for item in movie_dna.dna %}
+    <div class="dna-bar-row">
+      <div class="dna-bar-label">{{ item.genre }}</div>
+      <div class="dna-bar-track">
+        <div
+          class="dna-bar-fill"
+          data-width="{{ (item.avg_rating / 5 * 100)|int }}"
+          style="width: 0%"
+        ></div>
+      </div>
+      <div class="dna-bar-value">{{ item.avg_rating }}/5</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <p class="dna-note">* Bar shows average audience rating for each genre across all {{ movie_dna.num_ratings }} ratings</p>
+</div>
+{% endif %}
+
+<!-- Recommendations -->
 <div class="section">
   <div class="section-header">
     <h2>🎯 Recommended for you</h2>

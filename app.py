@@ -1,6 +1,10 @@
 from recommender import (hybrid_recommend, get_popular_movies, search_titles,
                          get_movie_details, ALL_TITLES,
                          collab_similarity_df, content_similarity_df,
+                         mood_recommend, MOOD_MAP, get_movie_dna)
+from recommender import (hybrid_recommend, get_popular_movies, search_titles,
+                         get_movie_details, ALL_TITLES,
+                         collab_similarity_df, content_similarity_df,
                          mood_recommend, MOOD_MAP)
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from recommender import (hybrid_recommend, get_popular_movies, search_titles,
@@ -88,6 +92,7 @@ def search():
 
         recs = hybrid_recommend(movie, n=10)
         searched_details = get_movie_details(movie)
+        movie_dna = get_movie_dna(movie)
 
         recs_with_details = []
         for title, score in recs:
@@ -107,6 +112,7 @@ def search():
             movie=movie,
             searched_details=searched_details,
             recommendations=recs_with_details,
+            movie_dna=movie_dna,  
             logged_in='user' in session,
             username=session.get('user', '')
         )

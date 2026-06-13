@@ -265,3 +265,55 @@ def mood_recommend(mood_key, n=12):
     results = top[['title', 'avg_rating', 'genres']].to_dict('records')
 
     return results, mood
+
+# ── Movie DNA ───────────────────────────────────────────────
+ALL_GENRES = [
+    'Action', 'Adventure', 'Animation', 'Children', 'Comedy',
+    'Crime', 'Documentary', 'Drama', 'Fantasy', 'Film-Noir',
+    'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi',
+    'Thriller', 'War', 'Western'
+]
+
+def get_movie_dna(movie_title):
+    """
+    Returns the genre breakdown of a movie as a dictionary.
+    Also returns how this movie compares to average ratings per genre.
+    """
+    # Find the movie
+    match = movies[movies['title'] == movie_title]
+    if match.empty:
+        return None
+
+    movie_genres = match.iloc[0]['genres'].split('|')
+    movie_genres = [g for g in movie_genres if g != '(no genres listed)']
+
+    # Build DNA — which genres are present
+    dna = []
+    for genre in ALL_GENRES:
+        if genre in movie_genres:
+            # Get average rating for this genre across all movies
+            genre_movies = movies[
+                movies['genres'].str.contains(genre, na=False)
+            ]['title'].tolist()
+            genre_ratings = clean_data[
+                clean_data['title'].isin(genre_movies)
+            ]['rating']
+            avg = round(genre_ratings.mean(), 2) if len(genre_ratings) > 0 else 0
+            dna.append({
+                'genre':      genre,
+                'present':    True,
+                'avg_rating': avg
+            })
+
+    # Get this movie's own average rating
+    movie_ratings = clean_data[
+        clean_data['title'] == movie_title
+    ]['rating']
+    movie_avg = round(movie_ratings.mean(), 2) if len(movie_ratings) > 0 else 0
+
+    return {
+        'genres':     movie_genres,
+        'dna':        dna,
+        'movie_avg':  movie_avg,
+        'num_ratings': len(movie_ratings)
+    }
