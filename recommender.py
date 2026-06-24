@@ -12,22 +12,37 @@ TMDB_API_KEY = os.getenv('TMDB_API_KEY')
 TMDB_BASE    = 'https://api.themoviedb.org/3'
 POSTER_BASE  = 'https://image.tmdb.org/t/p/w500'
 
-# ── Load data ──────────────────────────────────────────────
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR   = os.path.join(BASE_DIR, 'data')
-MODELS_DIR = os.path.join(BASE_DIR, 'models')
+BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
+TMDB_DIR    = os.path.join(BASE_DIR, 'data', 'tmdb')
+MODELS_DIR  = os.path.join(BASE_DIR, 'models')
 
-clean_data = pd.read_csv(os.path.join(DATA_DIR, 'clean_data.csv'))
-movies     = pd.read_csv(os.path.join(DATA_DIR, 'ml-latest-small', 'movies.csv'))
-links      = pd.read_csv(os.path.join(DATA_DIR, 'ml-latest-small', 'links.csv'))
+# ── Load TMDB data ──────────────────────────────────────────
+print("Loading TMDB dataset...")
+movies  = pd.read_csv(os.path.join(TMDB_DIR, 'tmdb_movies.csv'))
+ratings = pd.read_csv(os.path.join(TMDB_DIR, 'tmdb_ratings.csv'))
+trending_df = pd.read_csv(os.path.join(TMDB_DIR, 'tmdb_trending.csv'))
+
+movies['genres']   = movies['genres'].fillna('')
+movies['keywords'] = movies['keywords'].fillna('')
+movies['cast']     = movies['cast'].fillna('')
+movies['director'] = movies['director'].fillna('')
+movies['overview'] = movies['overview'].fillna('')
+
+movies['year'] = pd.to_numeric(
+    movies['release_date'].str[:4], errors='coerce'
+).fillna(0).astype(int)
+
+clean_data = ratings.rename(columns={'title': 'title'})
+
+print(f"✅ Loaded {len(movies)} movies, {len(ratings)} ratings")
 
 # ── Load optimal weights ────────────────────────────────────
 weights_path = os.path.join(MODELS_DIR, 'hybrid_weights.json')
 if os.path.exists(weights_path):
     with open(weights_path) as f:
         w = json.load(f)
-    COLLAB_WEIGHT  = w['collab_weight']
-    CONTENT_WEIGHT = w['content_weight']
+    COLLAB_WEIGHT  = w.get('collab_weight', 0.4)
+    CONTENT_WEIGHT = w.get('content_weight', 0.6)
 else:
     COLLAB_WEIGHT  = 0.4
     CONTENT_WEIGHT = 0.6
@@ -43,24 +58,26 @@ collab_similarity_df = pd.DataFrame(
     index=user_movie_matrix.columns,
     columns=user_movie_matrix.columns
 )
-print("✅ Collaborative matrix ready")
+print(f"✅ Collaborative matrix ready: {collab_similarity_df.shape}")
 
-# ── Build content matrix ────────────────────────────────────
+# ── Build content matrix (richer features now) ──────────────
 print("Building content matrix...")
-movies['genres_clean'] = movies['genres'].str.replace(
-    '|', ' ', regex=False).str.replace(
-    '(no genres listed)', '', regex=False).str.strip()
-movies['year'] = pd.to_numeric(
-    movies['title'].str.extract(r'\((\d{4})\)')[0],
-    errors='coerce').fillna(0).astype(int)
+movies['genres_clean'] = movies['genres'].str.replace('|', ' ', regex=False)
+movies['keywords_clean'] = movies['keywords'].str.replace('|', ' ', regex=False)
+movies['cast_clean'] = movies['cast'].str.replace('|', ' ', regex=False).str.replace(' ', '', regex=False)
+movies['director_clean'] = movies['director'].str.replace(' ', '', regex=False)
+
 movies['combined_features'] = (
     movies['genres_clean'] + ' ' +
-    movies['genres_clean'] + ' ' +
+    movies['genres_clean'] + ' ' +       # weight genres x2
+    movies['keywords_clean'] + ' ' +
+    movies['cast_clean'] + ' ' +
+    movies['director_clean'] + ' ' +
     movies['year'].astype(str)
 ).fillna('')
 
 tfidf = TfidfVectorizer(
-    min_df=2, max_features=5000,
+    min_df=2, max_features=8000,
     strip_accents='unicode', analyzer='word',
     token_pattern=r'\w{2,}', ngram_range=(1, 2),
     stop_words='english'
@@ -71,63 +88,28 @@ content_similarity_df = pd.DataFrame(
     index=movies['title'],
     columns=movies['title']
 )
-print("✅ Content matrix ready")
+print(f"✅ Content matrix ready: {content_similarity_df.shape}")
 
 ALL_TITLES = sorted(collab_similarity_df.columns.tolist())
 
 
-# ── TMDB API ────────────────────────────────────────────────
-def get_tmdb_id(movie_title):
-    """Get TMDB ID from links.csv using movieId."""
+# ── TMDB live lookups (poster/overview for any movie) ────────
+def get_movie_details(movie_title):
+    """Get poster, overview, rating from local dataset first, TMDB as fallback."""
     match = movies[movies['title'] == movie_title]
     if match.empty:
-        return None
-    movie_id = match.iloc[0]['movieId']
-    link_row = links[links['movieId'] == movie_id]
-    if link_row.empty or pd.isna(link_row.iloc[0]['tmdbId']):
-        return None
-    return int(link_row.iloc[0]['tmdbId'])
+        return {'poster': None, 'overview': 'No summary available.',
+                'rating': 'N/A', 'year': '', 'genres': []}
 
-
-def get_movie_details(movie_title):
-    """
-    Fetch poster, overview, rating and release date
-    from TMDB API for a given movie title.
-    """
-    tmdb_id = get_tmdb_id(movie_title)
-    if not tmdb_id or not TMDB_API_KEY:
-        return {
-            'poster':   None,
-            'overview': 'No summary available.',
-            'rating':   'N/A',
-            'year':     '',
-            'genres':   []
-        }
-
-    try:
-        url      = f"{TMDB_BASE}/movie/{tmdb_id}"
-        params   = {'api_key': TMDB_API_KEY, 'language': 'en-US'}
-        response = requests.get(url, params=params, timeout=5)
-
-        if response.status_code == 200:
-            data = response.json()
-            poster_path = data.get('poster_path')
-            return {
-                'poster':   f"{POSTER_BASE}{poster_path}" if poster_path else None,
-                'overview': data.get('overview', 'No summary available.') or 'No summary available.',
-                'rating':   round(data.get('vote_average', 0), 1),
-                'year':     data.get('release_date', '')[:4] if data.get('release_date') else '',
-                'genres':   [g['name'] for g in data.get('genres', [])][:3]
-            }
-    except Exception:
-        pass
+    row = match.iloc[0]
+    poster = f"{POSTER_BASE}{row['poster_path']}" if pd.notna(row.get('poster_path')) and row.get('poster_path') else None
 
     return {
-        'poster':   None,
-        'overview': 'No summary available.',
-        'rating':   'N/A',
-        'year':     '',
-        'genres':   []
+        'poster':   poster,
+        'overview': row['overview'] if row['overview'] else 'No summary available.',
+        'rating':   round(row['vote_average'], 1) if pd.notna(row['vote_average']) else 'N/A',
+        'year':     str(row['year']) if row['year'] > 0 else '',
+        'genres':   row['genres'].split('|')[:3] if row['genres'] else []
     }
 
 
@@ -162,15 +144,51 @@ def hybrid_recommend(movie_title, n=10):
 
 # ── Cold start ──────────────────────────────────────────────
 def get_popular_movies(n=10):
-    popular = (
-        clean_data.groupby('title')['rating']
-        .agg(['count', 'mean'])
-        .rename(columns={'count': 'num_ratings', 'mean': 'avg_rating'})
-    )
-    popular = popular[popular['num_ratings'] >= 50]
-    popular['score'] = popular['avg_rating'] * np.log1p(popular['num_ratings'])
+    popular = movies.copy()
+    popular = popular[popular['vote_count'] >= 50]
+    popular['score'] = popular['vote_average'] * np.log1p(popular['vote_count'])
     top = popular.sort_values('score', ascending=False).head(n)
-    return [(t, round(r['avg_rating'], 2)) for t, r in top.iterrows()]
+    return [(row['title'], round(row['vote_average']/2, 2)) for _, row in top.iterrows()]
+
+
+# ── Trending now ─────────────────────────────────────────────
+def get_trending_movies(n=12):
+    top = trending_df.head(n)
+    results = []
+    for _, row in top.iterrows():
+        poster = f"{POSTER_BASE}{row['poster_path']}" if pd.notna(row.get('poster_path')) and row.get('poster_path') else None
+        results.append({
+            'title':    row['title'],
+            'poster':   poster,
+            'overview': row['overview'] if pd.notna(row['overview']) else '',
+            'rating':   round(row['vote_average'], 1) if pd.notna(row['vote_average']) else 'N/A',
+            'year':     row['release_date'][:4] if pd.notna(row['release_date']) and row['release_date'] else '',
+            'genres':   row['genres'].split('|')[:2] if pd.notna(row['genres']) and row['genres'] else []
+        })
+    return results
+
+
+# ── Hidden gems ───────────────────────────────────────────────
+def get_hidden_gems(n=12):
+    """High rating, low vote count = hidden gem."""
+    gems = movies.copy()
+    gems = gems[(gems['vote_average'] >= 7.0) & (gems['vote_count'] >= 20) & (gems['vote_count'] <= 500)]
+    gems['gem_score'] = gems['vote_average'] / np.log1p(gems['vote_count'])
+    top = gems.sort_values('gem_score', ascending=False).head(n)
+
+    results = []
+    for _, row in top.iterrows():
+        poster = f"{POSTER_BASE}{row['poster_path']}" if pd.notna(row.get('poster_path')) and row.get('poster_path') else None
+        results.append({
+            'title':      row['title'],
+            'poster':     poster,
+            'overview':   row['overview'],
+            'rating':     round(row['vote_average'], 1),
+            'vote_count': int(row['vote_count']),
+            'year':       str(row['year']) if row['year'] > 0 else '',
+            'genres':     row['genres'].split('|')[:2] if row['genres'] else []
+        })
+    return results
 
 
 # ── Search ──────────────────────────────────────────────────
@@ -197,7 +215,7 @@ MOOD_MAP = {
     },
     'mindblown': {
         'label':  'Blow My Mind 🤯',
-        'genres': ['Sci-Fi', 'Mystery'],
+        'genres': ['Science Fiction', 'Mystery'],
         'desc':   'Mind-bending stories that will make you think'
     },
     'romance': {
@@ -224,17 +242,13 @@ MOOD_MAP = {
 
 
 def mood_recommend(mood_key, n=12):
-    """
-    Return top N movies matching a mood based on genre mapping.
-    Uses content similarity and genre filtering.
-    """
+    """Return top N movies matching a mood based on genre + TMDB popularity."""
     if mood_key not in MOOD_MAP:
         return [], {}
 
-    mood     = MOOD_MAP[mood_key]
-    genres   = mood['genres']
+    mood   = MOOD_MAP[mood_key]
+    genres = mood['genres']
 
-    # Filter movies matching the mood genres
     matched = movies[
         movies['genres'].apply(
             lambda g: any(genre in g for genre in genres)
@@ -244,76 +258,56 @@ def mood_recommend(mood_key, n=12):
     if matched.empty:
         return [], mood
 
-    # Merge with ratings to get average rating and count
-    movie_stats = (
-        clean_data.groupby('title')['rating']
-        .agg(['mean', 'count'])
-        .rename(columns={'mean': 'avg_rating', 'count': 'num_ratings'})
-        .reset_index()
-    )
-
-    matched = matched.merge(movie_stats, on='title', how='left')
-    matched = matched.dropna(subset=['avg_rating'])
-    matched = matched[matched['num_ratings'] >= 20]
-
-    # Score = avg_rating weighted by log of num_ratings
-    matched['score'] = (
-        matched['avg_rating'] * np.log1p(matched['num_ratings'])
-    )
+    matched = matched[matched['vote_count'] >= 20]
+    matched['score'] = matched['vote_average'] * np.log1p(matched['vote_count'])
 
     top = matched.sort_values('score', ascending=False).head(n)
-    results = top[['title', 'avg_rating', 'genres']].to_dict('records')
+    results = top[['title', 'vote_average', 'genres']].rename(
+        columns={'vote_average': 'avg_rating'}
+    ).to_dict('records')
+
+    # Convert TMDB 0-10 scale to 0-5 for consistency with old template
+    for r in results:
+        r['avg_rating'] = round(r['avg_rating'] / 2, 2)
 
     return results, mood
 
+
 # ── Movie DNA ───────────────────────────────────────────────
 ALL_GENRES = [
-    'Action', 'Adventure', 'Animation', 'Children', 'Comedy',
-    'Crime', 'Documentary', 'Drama', 'Fantasy', 'Film-Noir',
-    'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi',
-    'Thriller', 'War', 'Western'
+    'Action', 'Adventure', 'Animation', 'Comedy', 'Crime',
+    'Documentary', 'Drama', 'Family', 'Fantasy', 'History',
+    'Horror', 'Music', 'Mystery', 'Romance', 'Science Fiction',
+    'TV Movie', 'Thriller', 'War', 'Western'
 ]
 
 def get_movie_dna(movie_title):
-    """
-    Returns the genre breakdown of a movie as a dictionary.
-    Also returns how this movie compares to average ratings per genre.
-    """
-    # Find the movie
+    """Returns the genre breakdown of a movie using TMDB data."""
     match = movies[movies['title'] == movie_title]
     if match.empty:
         return None
 
-    movie_genres = match.iloc[0]['genres'].split('|')
-    movie_genres = [g for g in movie_genres if g != '(no genres listed)']
+    movie_genres = [g for g in match.iloc[0]['genres'].split('|') if g]
 
-    # Build DNA — which genres are present
     dna = []
     for genre in ALL_GENRES:
         if genre in movie_genres:
-            # Get average rating for this genre across all movies
             genre_movies = movies[
                 movies['genres'].str.contains(genre, na=False)
-            ]['title'].tolist()
-            genre_ratings = clean_data[
-                clean_data['title'].isin(genre_movies)
-            ]['rating']
-            avg = round(genre_ratings.mean(), 2) if len(genre_ratings) > 0 else 0
+            ]
+            avg = round(genre_movies['vote_average'].mean() / 2, 2) if len(genre_movies) > 0 else 0
             dna.append({
                 'genre':      genre,
                 'present':    True,
                 'avg_rating': avg
             })
 
-    # Get this movie's own average rating
-    movie_ratings = clean_data[
-        clean_data['title'] == movie_title
-    ]['rating']
-    movie_avg = round(movie_ratings.mean(), 2) if len(movie_ratings) > 0 else 0
+    movie_row = match.iloc[0]
+    movie_avg = round(movie_row['vote_average'] / 2, 2) if pd.notna(movie_row['vote_average']) else 0
 
     return {
-        'genres':     movie_genres,
-        'dna':        dna,
-        'movie_avg':  movie_avg,
-        'num_ratings': len(movie_ratings)
+        'genres':      movie_genres,
+        'dna':         dna,
+        'movie_avg':   movie_avg,
+        'num_ratings': int(movie_row['vote_count']) if pd.notna(movie_row['vote_count']) else 0
     }
