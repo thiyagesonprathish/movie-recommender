@@ -311,3 +311,9 @@ def get_movie_dna(movie_title):
         'movie_avg':   movie_avg,
         'num_ratings': int(movie_row['vote_count']) if pd.notna(movie_row['vote_count']) else 0
     }
+
+    # ── Export matrices for confidence engine ───────────────────
+COLLAB_SIM_DF  = collab_similarity_df
+CONTENT_SIM_DF = content_similarity_df
+MOVIES_DF      = movies
+CLEAN_DATA     = clean_data

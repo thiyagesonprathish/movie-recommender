@@ -104,24 +104,75 @@
         <div class="match-badge">🎯 {{ "%.0f"|format(rec.score * 100) }}%</div>
       </div>
       <div class="rec-info">
-        <div class="rec-title">{{ rec.title }}</div>
-        <div class="rec-meta">
-          {% if rec.rating != 'N/A' %}
-            <span class="gold-text">⭐ {{ rec.rating }}</span>
-          {% endif %}
-          {% if rec.year %}
-            <span>{{ rec.year }}</span>
-          {% endif %}
-        </div>
-        {% if rec.genres %}
-        <div class="rec-genres">
-          {% for genre in rec.genres %}
-            <span class="genre-tag-sm">{{ genre }}</span>
-          {% endfor %}
-        </div>
-        {% endif %}
-        <p class="rec-overview">{{ rec.overview[:110] }}{% if rec.overview|length > 110 %}...{% endif %}</p>
+  <div class="rec-title">{{ rec.title }}</div>
+  <div class="rec-meta">
+    {% if rec.rating != 'N/A' %}
+      <span class="gold-text">⭐ {{ rec.rating }}</span>
+    {% endif %}
+    {% if rec.year %}
+      <span>{{ rec.year }}</span>
+    {% endif %}
+  </div>
+  {% if rec.genres %}
+  <div class="rec-genres">
+    {% for genre in rec.genres %}
+      <span class="genre-tag-sm">{{ genre }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <p class="rec-overview">
+    {{ rec.overview[:100] }}{% if rec.overview|length > 100 %}...{% endif %}
+  </p>
+
+  <!-- Confidence breakdown -->
+  <div class="confidence-box">
+    <div class="conf-row">
+      <span class="conf-label">👥 Collaborative</span>
+      <div class="conf-bar-track">
+        <div class="conf-bar-fill collab-fill"
+             data-width="{{ rec.collab_score }}"
+             style="width:0%"></div>
       </div>
+      <span class="conf-val">{{ rec.collab_score }}%</span>
+    </div>
+    <div class="conf-row">
+      <span class="conf-label">🎭 Content</span>
+      <div class="conf-bar-track">
+        <div class="conf-bar-fill content-fill"
+             data-width="{{ rec.content_score }}"
+             style="width:0%"></div>
+      </div>
+      <span class="conf-val">{{ rec.content_score }}%</span>
+    </div>
+    <div class="conf-row">
+      <span class="conf-label">📈 Popularity</span>
+      <div class="conf-bar-track">
+        <div class="conf-bar-fill pop-fill"
+             data-width="{{ rec.popularity_score }}"
+             style="width:0%"></div>
+      </div>
+      <span class="conf-val">{{ rec.popularity_score }}%</span>
+    </div>
+    <div class="conf-row">
+      <span class="conf-label">🌟 Novelty</span>
+      <div class="conf-bar-track">
+        <div class="conf-bar-fill novelty-fill"
+             data-width="{{ rec.novelty_score }}"
+             style="width:0%"></div>
+      </div>
+      <span class="conf-val">{{ rec.novelty_score }}%</span>
+    </div>
+    {% if rec.genre_overlap %}
+    <div class="conf-genres">
+      Shared genres:
+      {% for g in rec.genre_overlap[:3] %}
+        <span class="genre-tag-sm">{{ g }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <p class="conf-reason">{{ rec.reason }}</p>
+  </div>
+</div>
     </a>
     {% else %}
       <p>No recommendations found. Try a different movie.</p>

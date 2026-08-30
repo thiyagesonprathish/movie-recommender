@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="results-header">
+  <a href="/" class="back-link">← Back to home</a>
+  <h1>Context-Aware <span class="gold-text">Recommendations</span></h1>
+  <p class="subtitle">Tell us your situation and we'll find the perfect movie for this exact moment</p>
+</div>
+
+<!-- Context form -->
+<form action="/context" method="POST" class="context-form glass-card">
+
+  <!-- Movie search -->
+  <div class="ctx-section">
+    <label class="ctx-section-title">🎬 What movie do you like?</label>
+    <div class="search-wrapper" style="margin-top:12px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" name="movie" id="movie-input"
+             value="{{ movie or '' }}"
+             placeholder="e.g. Toy Story, Inception..."
+             class="search-input" autocomplete="off"/>
+    </div>
+  </div>
+
+  <!-- Time of day -->
+  <div class="ctx-section">
+    <label class="ctx-section-title">⏰ Time of day</label>
+    <div class="ctx-options">
+      {% for val, label in [('morning','🌅 Morning'),('afternoon','☀️ Afternoon'),('evening','🌆 Evening'),('late_night','🌙 Late Night')] %}
+      <label class="ctx-option {% if time_of_day == val %}ctx-active{% endif %}">
+        <input type="radio" name="time_of_day" value="{{ val }}"
+               {% if time_of_day == val %}checked{% endif %} hidden/>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </div>
+    <p class="ctx-note">Auto-detected: {{ auto_time.replace('_', ' ').title() }}</p>
+  </div>
+
+  <!-- Situation -->
+  <div class="ctx-section">
+    <label class="ctx-section-title">👥 Viewing situation</label>
+    <div class="ctx-options">
+      {% for val, label in [('solo','🧍 Solo'),('date','❤️ Date Night'),('family','👨‍👩‍👧 Family'),('friends','👫 Friends')] %}
+      <label class="ctx-option {% if situation == val %}ctx-active{% endif %}">
+        <input type="radio" name="situation" value="{{ val }}"
+               {% if situation == val %}checked{% endif %} hidden/>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Energy -->
+  <div class="ctx-section">
+    <label class="ctx-section-title">⚡ Energy level</label>
+    <div class="ctx-options">
+      {% for val, label in [('relaxed','😌 Relaxed'),('normal','😊 Normal'),('energised','🔥 Energised')] %}
+      <label class="ctx-option {% if energy == val %}ctx-active{% endif %}">
+        <input type="radio" name="energy" value="{{ val }}"
+               {% if energy == val %}checked{% endif %} hidden/>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Duration -->
+  <div class="ctx-section">
+    <label class="ctx-section-title">⏱️ How much time do you have?</label>
+    <div class="ctx-options">
+      {% for val, label in [('short','⚡ Under 100 mins'),('medium','🎬 Under 150 mins'),('any','🍿 Any length')] %}
+      <label class="ctx-option {% if duration == val %}ctx-active{% endif %}">
+        <input type="radio" name="duration" value="{{ val }}"
+               {% if duration == val %}checked{% endif %} hidden/>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-gold" style="width:100%;padding:14px;font-size:1rem;margin-top:8px;">
+    🎯 Get Context-Aware Recommendations
+  </button>
+</form>
+
+{% if movie and recommendations %}
+
+<!-- Context summary -->
+<div class="ctx-summary-bar glass-card">
+  <span class="ctx-summary-label">📍 Your context:</span>
+  <span class="ctx-summary-text">{{ ctx_summary }}</span>
+</div>
+
+<!-- Results -->
+<div class="section">
+  <div class="section-header">
+    <h2>🎯 Perfect for this moment</h2>
+    <p class="subtitle">Recommendations re-ranked based on your current situation</p>
+  </div>
+
+  <div class="rec-grid">
+    {% for rec in recommendations %}
+    <a href="/search?movie={{ rec.title }}" class="rec-card glass-card">
+      <div class="rec-poster">
+        {% if rec.poster %}
+          <img src="{{ rec.poster }}" alt="{{ rec.title }}"/>
+        {% else %}
+          <div class="no-poster">🎬</div>
+        {% endif %}
+        <div class="match-badge">🎯 {{ rec.base_score }}%</div>
+        {% if rec.ctx_fit > 60 %}
+        <div class="ctx-fit-badge">📍 {{ rec.ctx_fit }}% fit</div>
+        {% endif %}
+      </div>
+      <div class="rec-info">
+        <div class="rec-title">{{ rec.title }}</div>
+        <div class="rec-meta">
+          {% if rec.rating != 'N/A' %}
+            <span class="gold-text">⭐ {{ rec.rating }}</span>
+          {% endif %}
+          {% if rec.year %}<span>{{ rec.year }}</span>{% endif %}
+        </div>
+        {% if rec.genres %}
+        <div class="rec-genres">
+          {% for genre in rec.genres %}
+            <span class="genre-tag-sm">{{ genre }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <p class="rec-overview">
+          {{ rec.overview[:100] }}{% if rec.overview|length > 100 %}...{% endif %}
+        </p>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+{% elif movie and not recommendations %}
+<div class="glass-card" style="padding:32px;text-align:center;margin-top:32px;">
+  <p style="color:var(--dim);">No results found for "{{ movie }}". Try a different title.</p>
+</div>
+{% endif %}
+
+<script>
+// Make radio labels clickable and visually active
+document.querySelectorAll('.ctx-option input[type=radio]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    const group = this.name;
+    document.querySelectorAll(`input[name="${group}"]`).forEach(r => {
+      r.parentElement.classList.remove('ctx-active');
+    });
+    this.parentElement.classList.add('ctx-active');
+  });
+});
+</script>
+
+{% endblock %}

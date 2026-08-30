@@ -810,3 +810,142 @@ body {
   color: var(--dim);
   margin-top: 8px;
 }
+
+/* ── CONFIDENCE BOX ── */
+.confidence-box {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+}
+.conf-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.conf-label {
+  font-size: 0.68rem;
+  color: var(--dim);
+  width: 90px;
+  flex-shrink: 0;
+}
+.conf-bar-track {
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.conf-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  width: 0%;
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+.collab-fill  { background: #818cf8; }
+.content-fill { background: #34d399; }
+.pop-fill     { background: var(--gold); }
+.novelty-fill { background: #f472b6; }
+.conf-val {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--white);
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.conf-genres {
+  font-size: 0.68rem;
+  color: var(--dim);
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.conf-reason {
+  font-size: 0.7rem;
+  color: var(--dim);
+  margin-top: 6px;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* ── CONTEXT PAGE ── */
+.context-form {
+  padding: 28px;
+  margin: 28px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.ctx-section { display: flex; flex-direction: column; gap: 8px; }
+.ctx-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--white);
+}
+.ctx-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ctx-option {
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.04);
+  color: var(--dim);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  user-select: none;
+}
+.ctx-option:hover { border-color: var(--gold-border); color: var(--white); }
+.ctx-active {
+  background: var(--gold-dim) !important;
+  border-color: var(--gold) !important;
+  color: var(--gold) !important;
+  font-weight: 600;
+}
+.ctx-note {
+  font-size: 0.72rem;
+  color: var(--dim);
+  font-style: italic;
+}
+
+/* CONTEXT SUMMARY BAR */
+.ctx-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  margin: 24px 0;
+  flex-wrap: wrap;
+}
+.ctx-summary-label {
+  font-size: 0.78rem;
+  color: var(--dim);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.ctx-summary-text {
+  font-size: 0.82rem;
+  color: var(--gold);
+  font-weight: 500;
+}
+
+/* CONTEXT FIT BADGE */
+.ctx-fit-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(52,211,153,0.85);
+  color: #000;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}

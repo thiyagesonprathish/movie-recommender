@@ -10,6 +10,17 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from recommender import (hybrid_recommend, get_popular_movies, search_titles,
                          get_movie_details, ALL_TITLES,
                          collab_similarity_df, content_similarity_df)
+from recommender import (hybrid_recommend, get_popular_movies, search_titles,
+                         get_movie_details, ALL_TITLES,
+                         collab_similarity_df, content_similarity_df,
+                         mood_recommend, MOOD_MAP, get_movie_dna,
+                         get_trending_movies, get_hidden_gems,
+                         COLLAB_SIM_DF, CONTENT_SIM_DF, MOVIES_DF, CLEAN_DATA,
+                         COLLAB_WEIGHT, CONTENT_WEIGHT)
+from context_engine import (build_context_profile, apply_context,
+                             context_summary, get_time_of_day, get_day_type)
+
+from confidence_engine import compute_confidence_batch
 import json
 import os
 from datetime import date
@@ -84,54 +95,57 @@ def search():
     movie = request.args.get('movie', '').strip()
 
     if movie:
-        # Check guest limit
         if 'user' not in session:
             if get_guest_searches() >= GUEST_LIMIT:
                 return render_template('limit_reached.html')
             increment_guest_searches()
 
-        recs = hybrid_recommend(movie, n=10)
-        searched_details = get_movie_details(movie)
-        movie_dna = get_movie_dna(movie)
+        recs             = hybrid_recommend(movie, n=10)
+    searched_details = get_movie_details(movie)
+    movie_dna        = get_movie_dna(movie)
 
-        recs_with_details = []
-        for title, score in recs:
-            details = get_movie_details(title)
-            recs_with_details.append({
-                'title':    title,
-                'score':    score,
-                'poster':   details['poster'],
-                'overview': details['overview'],
-                'rating':   details['rating'],
-                'year':     details['year'],
-                'genres':   details['genres']
-            })
+    # Compute confidence scores for all recommendations
+    confidence_data  = compute_confidence_batch(
+        movie,
+        recs,
+        COLLAB_SIM_DF,
+        CONTENT_SIM_DF,
+        CLEAN_DATA,
+        MOVIES_DF,
+        COLLAB_WEIGHT,
+        CONTENT_WEIGHT
+    )
 
-        return render_template(
-            'results.html',
-            movie=movie,
-            searched_details=searched_details,
-            recommendations=recs_with_details,
-            movie_dna=movie_dna,  
-            logged_in='user' in session,
-            username=session.get('user', '')
-        )
-
-    suggestions = search_titles(query) if query else []
-    popular_raw = get_popular_movies(10)
-    popular = []
-    for title, rating in popular_raw:
+    recs_with_details = []
+    for i, (title, score) in enumerate(recs):
         details = get_movie_details(title)
-        popular.append({
-            'title':  title,
-            'rating': rating,
-            'poster': details['poster'],
-            'genres': details['genres']
+        conf    = confidence_data[i]
+        recs_with_details.append({
+            'title':           title,
+            'score':           score,
+            'poster':          details['poster'],
+            'overview':        details['overview'],
+            'rating':          details['rating'],
+            'year':            details['year'],
+            'genres':          details['genres'],
+            'collab_score':    conf['collab_score'],
+            'content_score':   conf['content_score'],
+            'popularity_score':conf['popularity_score'],
+            'novelty_score':   conf['novelty_score'],
+            'genre_overlap':   conf['genre_overlap'],
+            'user_count':      conf['collab_user_count'],
+            'reason':          conf['reason']
         })
-    return render_template('index.html',
-                           popular=popular,
-                           suggestions=suggestions,
-                           query=query)
+
+    return render_template(
+        'results.html',
+        movie=movie,
+        searched_details=searched_details,
+        recommendations=recs_with_details,
+        movie_dna=movie_dna,
+        logged_in='user' in session,
+        username=session.get('user', '')
+    )
 
 @app.route('/compare')
 def compare():
@@ -300,3 +314,62 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+@app.route('/context', methods=['GET', 'POST'])
+def context():
+    if 'user' not in session:
+        if get_guest_searches() >= GUEST_LIMIT:
+            return render_template('limit_reached.html')
+
+    movie       = request.args.get('movie', '').strip()
+    situation   = request.form.get('situation',  request.args.get('situation',  'solo'))
+    energy      = request.form.get('energy',     request.args.get('energy',     'normal'))
+    duration    = request.form.get('duration',   request.args.get('duration',   'any'))
+    time_of_day = request.form.get('time_of_day',request.args.get('time_of_day', get_time_of_day()))
+    day_type    = get_day_type()
+
+    context_profile = build_context_profile(
+        situation=situation,
+        energy=energy,
+        duration=duration,
+        time_of_day=time_of_day,
+        day_type=day_type
+    )
+
+    ctx_summary = context_summary(context_profile)
+
+    recs_with_details = []
+
+    if movie:
+        if 'user' not in session:
+            increment_guest_searches()
+
+        recs     = hybrid_recommend(movie, n=15)
+        reranked = apply_context(recs, MOVIES_DF, context_profile)
+
+        for title, base_score, ctx_score, ctx_fit in reranked[:10]:
+            details = get_movie_details(title)
+            recs_with_details.append({
+                'title':       title,
+                'base_score':  round(base_score * 100),
+                'ctx_score':   round(ctx_score * 100, 1),
+                'ctx_fit':     ctx_fit,
+                'poster':      details['poster'],
+                'overview':    details['overview'],
+                'rating':      details['rating'],
+                'year':        details['year'],
+                'genres':      details['genres']
+            })
+
+    return render_template(
+        'context.html',
+        movie=movie,
+        situation=situation,
+        energy=energy,
+        duration=duration,
+        time_of_day=time_of_day,
+        ctx_summary=ctx_summary,
+        recommendations=recs_with_details,
+        auto_time=get_time_of_day(),
+        suggestions=search_titles(movie) if movie and not recs_with_details else []
+    )
